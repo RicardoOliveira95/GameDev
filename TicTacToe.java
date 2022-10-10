@@ -1,97 +1,117 @@
-import java.util.Random;
-import java.util.Scanner;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
-public class TicTacToe {
-	String[][] board = new String[3][3];
-	private static final String P1="x",P2="o";
-	private String winner;
-	int scorep1,scorep2;
+import javax.swing.*;
 
-	public TicTacToe() {
-		Scanner scan = new Scanner(System.in);
-		System.out.println("Tic Tac Toe: you play first");
-		emptyBoard();
-		while(true) {
-			System.out.println("Play in format: line/col: 12..");
-			int moveRow = scan.nextInt();
-			int moveCol = scan.nextInt();
-			if(!playableMove(moveRow,moveCol)) System.out.println("Can't play there, play again..");
-			makeMove(moveRow,moveCol);
-			makeBotMove();
-			if(checkWinner()) {
-				System.out.println("Winner is: "+winner);
-			}
-			printBoard();
-		}
-	}
+import jm.util.Play;    
+public class TicTacToe{    
+JFrame f;
+public int count;
+String pl_1="X",pl_2="O";
+int turn=1,moves=0;
+JButton[] btns;
+boolean isGameOver;
 
-	private boolean checkWinner() {
-		int j=0;  //CHECK ROWS
-		for(int i=0;i<board.length;i++) {
-			if(board[i][j]==board[i][j+1]&&board[i][j]==board[i][j+2]) {
-				System.out.println("LINE: "+board[i][j]+board[i][j+1]+board[i][j+2]);
-				winner = board[i][j]=="x" ? "Player1" : "Player2"; 
-				return true;
-			}
-		}  //CHECK COLS
-		for(int i=0;i<board[j].length;i++) {
-			if(board[j][i]==board[j+1][i]&&board[j][i]==board[j+2][i]) {
-				System.out.println("Column: "+board[j][i]+board[j+1][i]+board[j+2][i]);
-				winner = board[i][j]=="x" ? "Player1" : "Player2"; 
-				return true;
-			}
-		}
-		int i=0;
-		//CROSSES
-		if(board[i][j]==board[i+1][j+1]&&board[i][j]==board[i+2][j+2]||board[i+2][j]==board[i+1][j+1]&&board[i+2][j]==board[i][j+2]) {
-			winner = board[i][j]=="x" ? "Player1" : "Player2"; 
-		return true;}
-		return false;
-	}
+TicTacToe(){
+	isGameOver=false;
+    f=new JFrame();    
+    JButton b1=new JButton("1");    
+    JButton b2=new JButton("2");    
+    JButton b3=new JButton("3");    
+    JButton b4=new JButton("4");    
+    JButton b5=new JButton("5");    
+    JButton b6=new JButton("6");    
+    JButton b7=new JButton("7");    
+    JButton b8=new JButton("8");    
+    JButton b9=new JButton("9");    
+     // adding buttons to the frame       
+    f.add(b1); f.add(b2); f.add(b3);  
+    f.add(b4); f.add(b5); f.add(b6);  
+    f.add(b7); f.add(b8); f.add(b9);    
+  
+    // setting grid layout of 3 rows and 3 columns    
+    f.setLayout(new GridLayout(3,3));    
+    f.setSize(300,300);    
+    f.setVisible(true);
+    
+    btns = new JButton[9];
+    btns[0]=b1;
+    btns[1]=b2;
+    btns[2]=b3;
+    btns[3]=b4;
+    btns[4]=b5;
+    btns[5]=b6;
+    btns[6]=b7;
+    btns[7]=b8;
+    btns[8]=b9;
+    
+    for(count=0;count<btns.length;count++) {
+    	btns[count].addActionListener(new ActionListener() {
 
-	private void makeBotMove() {
-		// Dumb move
-		Random rand = new Random();
-		int moveRow = rand.nextInt(3);
-		int moveCol = rand.nextInt(3);
-		System.out.println(moveRow+moveCol);
-		if(playableMove(moveRow,moveCol)) {
-			board[moveRow][moveCol]=P2;
-		} else { makeBotMove();}
-	}
-
-	private boolean playableMove(int moveRow, int moveCol) {
-		if(board[moveRow][moveCol]==" ")
-			return true;
-		return false;
-	}
-
-	private void makeMove(int moveRow, int moveCol) {
-		board[moveRow][moveCol]=P1;
-	}
-
-	private void printBoard() {
-		for(int row=0;row<board.length;row++) {
-			System.out.println();;
-			for(int col=0;col<board[row].length;col++) {
-				System.out.print("|"+board[row][col]+"|");
-			}
-		}System.out.println();
-	}
-
-	private void emptyBoard() {
-		for(int row=0;row<board.length;row++) {
-			System.out.println();
-			for(int col=0;col<board[row].length;col++) {
-				board[row][col]=" ";
-				System.out.print("|"+board[row][col]+"|");
-				//System.out.println();
-			}
-		}System.out.println();
-	}
-
-	public static void main(String[] args) {
-		new TicTacToe();
-	}
-
+    		@Override
+    		public void actionPerformed(ActionEvent e) {
+    			turn++;
+    			JButton btn = (JButton) e.getSource();
+    			System.out.println(btn.getParent().getComponentZOrder(btn));
+    			if(turn%2==0) {
+    				if(!(btn.getLabel()==pl_1 || btn.getLabel()==pl_2)) {
+    					btn.setLabel(pl_1);
+    					btn.setBackground(Color.blue);
+    				}
+    				
+    				else
+    					turn--;
+    			}
+    			else {
+    				if(!(btn.getLabel()==pl_1 || btn.getLabel()==pl_2)) {
+    					btn.setLabel(pl_2);
+    					btn.setBackground(Color.red);
+    				}
+    					
+    				else 
+    					turn--;
+    			}
+    			
+    			if(checkWin(btn.getLabel())==1)
+    				JOptionPane.showMessageDialog(f, "Player 1 wins!");
+    			
+    			else if(checkWin(btn.getLabel())==2)
+    				JOptionPane.showMessageDialog(f, "Player 2 wins!");
+    			
+    			//System.out.println("WINNER: "+checkWin(btn.getLabel()));
+    		}	
+    	});
+    }
 }
+
+protected int checkWin(String label) {
+	//horizontal check
+	if((btns[0].getLabel()==btns[1].getLabel() && btns[0].getLabel()==btns[2].getLabel())||(btns[3].getLabel()==btns[4].getLabel() && btns[3].getLabel()==btns[5].getLabel())||(btns[6].getLabel()==btns[7].getLabel() && btns[6].getLabel()==btns[8].getLabel())) {
+		if(label==pl_1)
+			return 1;
+		else if(label==pl_2)
+			return 2;
+	}
+	//vertical check
+	if((btns[0].getLabel()==btns[3].getLabel() && btns[0].getLabel()==btns[6].getLabel())||(btns[1].getLabel()==btns[4].getLabel() && btns[1].getLabel()==btns[7].getLabel())||(btns[2].getLabel()==btns[5].getLabel() && btns[2].getLabel()==btns[8].getLabel())) {
+		if(label==pl_1)
+			return 1;
+		else if(label==pl_2)
+			return 2;
+	}
+	//diagonal check
+	if((btns[0].getLabel()==btns[4].getLabel() && btns[0].getLabel()==btns[8].getLabel())||(btns[2].getLabel()==btns[4].getLabel() && btns[2].getLabel()==btns[6].getLabel())) {
+		if(label==pl_1)
+			return 1;
+		else if(label==pl_2)
+			return 2;
+	}
+	
+	return 0;
+}
+
+public static void main(String[] args) {    
+    new TicTacToe();    
+}    
+}   

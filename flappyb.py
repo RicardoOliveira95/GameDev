@@ -7,7 +7,7 @@ import random
 
 pygame.init()
 
-W, H=480,640
+W, H=460,640
 win=pygame.display.set_mode((W,H))
 pygame.display.set_caption("Flappy bird'z")
 
@@ -19,7 +19,7 @@ isGameOver=False
 
 class Bird(object):
     bird_img=pygame.image.load(os.path.join('ftex','bird.png'))
-    bird_img1=pygame.image.load(os.path.join('ftex','bird3.png')).convert()
+    bird_img1=pygame.image.load(os.path.join('ftex','bird4.png'))
     def __init__(self,x,y):
         self.x=x
         self.y=y
@@ -30,12 +30,13 @@ class Bird(object):
         #self.hitbox=(0,0,0,0)
 
     def draw(self,win):
-        win.blit(self.bird_img,(self.x,self.y))
         self.hitbox=(self.x,self.y,self.bird_img1.get_width(),self.bird_img.get_height())
         if self.falling:
+            win.blit(self.bird_img1,(self.x,self.y))
             self.y+=self.GRAV
         
         if self.jumping:
+            win.blit(self.bird_img,(self.x,self.y))
             self.y-=6
             self.jumpCount+=1
         
@@ -54,10 +55,10 @@ class PipeN(object):
         self.x=x
         self.y=y
         self.vel=1.4
-        self.hitbox=(0,0,0,0)
+        self.hitbox=(x,y,self.pipeN_img.get_width(),self.pipeN_img.get_height()-abs(y))
     
     def draw(self,win):
-        self.hitbox=(self.x+10,self.y+5,self.pipeN_img.get_width(),self.pipeN_img.get_height())
+        self.hitbox=(self.x+10,self.y+5,self.pipeN_img.get_width(),self.pipeN_img.get_height()-abs(self.y))
         win.blit(self.pipeN_img,(self.x,self.y))
         self.x-=self.vel
         print(self.hitbox)
@@ -74,10 +75,10 @@ class PipeS(object):
         self.x=x
         self.y=y
         self.vel=1.4
-        #self.hitbox=(0,0,0,0)
+        self.hitbox=(x,y,self.pipeS_img.get_width(),self.pipeS_img.get_height()-(W-y))
     
     def draw(self,win):
-        self.hitbox=(self.x+10,self.y+5,self.pipeS_img.get_width(),self.pipeS_img.get_height())
+        self.hitbox=(self.x+10,self.y+5,self.pipeS_img.get_width(),self.pipeS_img.get_height()-(W-self.y))
         win.blit(self.pipeS_img,(self.x,self.y))
         self.x-=self.vel
         #print("Pipe south: ",self.x,",",self.y);
@@ -117,12 +118,14 @@ def redrawWindow():
         win.blit(text,(600,10))
     else:
         gameOverFont=pygame.font.SysFont("comicsans",30)
+        str_width=gameOverFont.size("GAMEOVER!")[0]
+        str_height=gameOverFont.size("GAMEOVER!")[1]
         gameover_text=gameOverFont.render("GAMEOVER!",1,(250,10,5))
-        win.blit(gameover_text,(W/2,H/2))
+        win.blit(gameover_text,(W/2-str_width/2,H/2-str_height/2))
     pygame.display.update()
 
 speed=20
-score=0
+#score=0
 run=True
 bird=Bird(10,10)
 pause=0

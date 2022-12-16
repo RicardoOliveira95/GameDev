@@ -30,6 +30,7 @@ class FlyingSprite(arcade.Sprite):
 
         # Remove us if we're off screen
         if self.right < 0:
+            print("REMOVE OBJECT")
             self.remove_from_sprite_lists()
 
 
@@ -48,7 +49,9 @@ class SpaceShooter(arcade.Window):
         # Setup the empty sprite lists
         self.enemies_list = arcade.SpriteList()
         self.clouds_list = arcade.SpriteList()
+        self.pickables_list = arcade.SpriteList()
         self.all_sprites = arcade.SpriteList()
+        self.explosion=arcade.Sprite('images/expl_tr.png',SCALING)
         self.score=0
         self.health=90
 
@@ -66,9 +69,10 @@ class SpaceShooter(arcade.Window):
 
         # Spawn a new enemy every second
         arcade.schedule(self.add_enemy, 0.5)
+        arcade.schedule(self.add_pickable,4.0)
 
         # Spawn a new cloud every 3 seconds
-        arcade.schedule(self.add_cloud, 3.0)
+        #arcade.schedule(self.add_cloud, 3.0)
 
         # Load our background music
         # Sound source: http://ccmixter.org/files/Apoxode/59262
@@ -112,6 +116,17 @@ class SpaceShooter(arcade.Window):
         # Add it to the enemies list
         self.enemies_list.append(enemy)
         self.all_sprites.append(enemy)
+
+    def add_pickable(self, delta_time: float):
+        pickable = FlyingSprite("images/health_tr.png",SCALING)
+
+        pickable.left = random.randint(self.width, self.width + 10)
+        pickable.top = random.randint(10, self.height - 10)
+
+        pickable.velocity = (random.randint(-50,-20),0)
+
+        self.pickables_list.append(pickable)
+        self.all_sprites.append(pickable)
 
     def add_cloud(self, delta_time: float):
         """Adds a new cloud to the screen
@@ -227,6 +242,12 @@ class SpaceShooter(arcade.Window):
             self.collided = True
             self.collision_timer = 0.0
             arcade.play_sound(self.collision_sound)
+        
+        if self.player.collides_with_list(self.clouds_list):
+            print("CLOUD!")
+        
+        for cloud in self.clouds_list:
+            print(cloud.x)
 
         # Update everything
         for sprite in self.all_sprites:
@@ -274,6 +295,9 @@ class SpaceShooter(arcade.Window):
 
         if self.gameover:
             arcade.draw_text("GAME OVER",SCREEN_WIDTH/2-10,SCREEN_HEIGHT/2-10,arcade.color.BLACK,width=50,align='center')
+            self.explosion.left=self.player.left
+            self.explosion.top=self.player.top
+            self.explosion.draw()
 
 
 if __name__ == "__main__":

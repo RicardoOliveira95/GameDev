@@ -41,7 +41,7 @@ void close();
 //Vars
 SDL_Window* gWin = NULL;
 SDL_Renderer* gRenderer = NULL;
-LTexture gDotTex,gBckgTex;
+LTexture gDotTex,gBckgTex,gFloorTex;
 
 LTexture::LTexture() {
 	//Constructor
@@ -208,6 +208,10 @@ bool loadMedia() {
 		printf("Failed to load dot texture..\n");
 		success = false;
 	}
+	if (!gFloorTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/ground1.png")) {
+		printf("Failed to load floor texture..\n");
+		success = false;
+	}
 	return success;
 }
 
@@ -215,6 +219,7 @@ void close() {
 	//Free textures
 	gDotTex.free();
 	gBckgTex.free();
+	gFloorTex.free();
 	//Destroy SDL components
 	SDL_DestroyRenderer(gRenderer);
 	SDL_DestroyWindow(gWin);
@@ -257,6 +262,8 @@ int main(int argc, char* args[]) {
 				//Render dot and background
 				gBckgTex.render(scrollingOffSet, 0);
 				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth(),0);
+				gFloorTex.render(scrollingOffSet, 400);
+				gFloorTex.render(scrollingOffSet + gFloorTex.getWidth(), 400);
 				dot.render();
 				//Update screen
 				SDL_RenderPresent(gRenderer);

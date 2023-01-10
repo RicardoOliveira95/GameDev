@@ -201,7 +201,6 @@ bool loadMedia() {
 	bool success = true;
 	//Load tex
 	if(!gDotTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/bird.png")){
-	//if (!gDotTex.loadFromFile("C:/Users/ricar/Downloads/31_scrolling_backgrounds/dot.bmp")) {
 		printf("Failed to load dot texture..\n");
 		success = false;
 	}

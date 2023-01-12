@@ -30,7 +30,7 @@ public:
 	Dot();
 	void handleEvent(SDL_Event& evt);
 	void move();
-	void render();
+	void render(SDL_Rect* clip=NULL);
 private:
 	int mPosX, mPosY, mVelX, mVelY;
 };
@@ -42,6 +42,10 @@ void close();
 SDL_Window* gWin = NULL;
 SDL_Renderer* gRenderer = NULL;
 LTexture gDotTex, gBckgTex, gFloorTex;
+//Walking animation
+const int WALKING_ANIMATION_FRAMES = 3;
+SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
+LTexture gSpriteSheetTexture;
 
 LTexture::LTexture() {
 	//Constructor
@@ -158,8 +162,9 @@ void Dot::move() {
 		mPosY += 2;
 }
 
-void Dot::render() {
-	gDotTex.render(mPosX, mPosY);
+void Dot::render(SDL_Rect* clip) {
+	//gDotTex.render(mPosX, mPosY);
+	gSpriteSheetTexture.render(mPosX, mPosY,clip);
 }
 
 bool init() {
@@ -216,10 +221,38 @@ bool loadMedia() {
 		printf("Failed to load floor texture..\n");
 		success = false;
 	}
+
+	//Load sprite sheet texture
+	if (!gSpriteSheetTexture.loadFromFile("C:/Users/ricar/Pictures/birdanimation.png"))
+	{
+		printf("Failed to load walking animation texture!\n");
+		success = false;
+	}
+	else
+	{
+		//Set sprite clips
+		gSpriteClips[0].x = 0;
+		gSpriteClips[0].y = 0;
+		gSpriteClips[0].w = 34;
+		gSpriteClips[0].h = 24;
+
+		gSpriteClips[1].x = 34;
+		gSpriteClips[1].y = 0;
+		gSpriteClips[1].w = 34;
+		gSpriteClips[1].h = 24;
+
+		gSpriteClips[2].x = 68;
+		gSpriteClips[2].y = 0;
+		gSpriteClips[2].w = 34;
+		gSpriteClips[2].h = 24;
+	}
+
 	return success;
 }
 
 void close() {
+	//Free loaded images
+	gSpriteSheetTexture.free();
 	//Free textures
 	gDotTex.free();
 	gBckgTex.free();
@@ -246,6 +279,7 @@ int main(int argc, char* args[]) {
 			SDL_Event evt;
 			Dot dot;
 			int scrollingOffSet = 0;
+			int frame = 0;
 
 			while (!quit) {
 				//Handle event on queue
@@ -268,9 +302,20 @@ int main(int argc, char* args[]) {
 				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth(), 0);
 				gFloorTex.render(scrollingOffSet, 400);
 				gFloorTex.render(scrollingOffSet + gFloorTex.getWidth(), 400);
-				dot.render();
+				//Render current frame
+				SDL_Rect* currentClip = &gSpriteClips[frame / 3];
+				dot.render(currentClip);
+				//gSpriteSheetTexture.render((SCREEN_W - currentClip->w) / 2, (SCREEN_H - currentClip->h) / 2, currentClip);
 				//Update screen
 				SDL_RenderPresent(gRenderer);
+				//Go to next frame
+				++frame;
+
+				//Cycle animation
+				if (frame / 3 >= WALKING_ANIMATION_FRAMES)
+				{
+					frame = 0;
+				}
 			}
 		}
 	}//Free res and close SDL

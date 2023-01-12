@@ -26,7 +26,7 @@ private:
 
 class Dot {
 public:
-	static const int DOT_W = 15, DOT_H = 15, DOT_VEL = 2;
+	static const int DOT_W = 15, DOT_H = 15, DOT_VEL = 4;
 	Dot();
 	void handleEvent(SDL_Event& evt);
 	void move();
@@ -41,7 +41,7 @@ void close();
 //Vars
 SDL_Window* gWin = NULL;
 SDL_Renderer* gRenderer = NULL;
-LTexture gDotTex,gBckgTex,gFloorTex;
+LTexture gDotTex, gBckgTex, gFloorTex;
 
 LTexture::LTexture() {
 	//Constructor
@@ -127,7 +127,7 @@ Dot::Dot() {
 
 void Dot::handleEvent(SDL_Event& evt) {
 	//Key press
-	if(evt.type==SDL_KEYDOWN && evt.key.repeat==0)
+	if (evt.type == SDL_KEYDOWN && evt.key.repeat == 0)
 		switch (evt.key.keysym.sym) {
 		case SDLK_w: mVelY -= DOT_VEL; break;
 		case SDLK_s: mVelY += DOT_VEL; break;
@@ -148,11 +148,14 @@ void Dot::move() {
 	//Update dot pos
 	mPosX += mVelX;
 	mPosY += mVelY;
+	
 	//Offbounds
 	if ((mPosX < 0) || (mPosX + DOT_W > SCREEN_W))
 		mPosX -= mVelX;
-	if ((mPosY < 0) || (mPosY + DOT_H > SCREEN_H))
+	else if ((mPosY < 0) || (mPosY + DOT_H +70 > SCREEN_H))
 		mPosY -= mVelY;
+	else
+		mPosY += 2;
 }
 
 void Dot::render() {
@@ -200,12 +203,13 @@ bool loadMedia() {
 	//Flag
 	bool success = true;
 	//Load tex
-	if(!gDotTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/bird.png")){
+	if (!gDotTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/bird.png")) {
+		//if (!gDotTex.loadFromFile("C:/Users/ricar/Downloads/31_scrolling_backgrounds/dot.bmp")) {
 		printf("Failed to load dot texture..\n");
 		success = false;
 	}
 	if (!gBckgTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/bg1.png")) {
-		printf("Failed to load dot texture..\n");
+		printf("Failed to load background texture..\n");
 		success = false;
 	}
 	if (!gFloorTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/ground1.png")) {
@@ -261,7 +265,7 @@ int main(int argc, char* args[]) {
 				SDL_RenderClear(gRenderer);
 				//Render dot and background
 				gBckgTex.render(scrollingOffSet, 0);
-				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth(),0);
+				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth(), 0);
 				gFloorTex.render(scrollingOffSet, 400);
 				gFloorTex.render(scrollingOffSet + gFloorTex.getWidth(), 400);
 				dot.render();

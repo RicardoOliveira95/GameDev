@@ -2,6 +2,7 @@
 #include <SDL_image.h>
 #include <stdio.h>
 #include <string>
+#include <string.h>
 
 const static int SCREEN_W = 640, SCREEN_H = 480;
 
@@ -11,6 +12,11 @@ public:
 	~LTexture();
 	bool loadFromFile(std::string path);
 	void free();
+	//Loads image into pixel buffer
+	bool loadPixelsFromFile(std::string path);
+
+	//Creates image from preloaded pixels
+	bool loadFromPixels();
 	//Sets
 	void setColor(Uint8 r, Uint8 g, Uint8 b);
 	void setBlendMode(SDL_BlendMode blending);
@@ -19,8 +25,13 @@ public:
 	//Gets
 	int getWidth();
 	int getHeight();
+	//Pixel accessors
+	Uint32* getPixels32();
+	Uint32 getPixel32(Uint32 x, Uint32 y);
+	Uint32 getPitch32();
 private:
 	SDL_Texture* mTex;
+	SDL_Surface* mSurfacePixels;
 	int m_w, m_h;
 };
 
@@ -34,6 +45,36 @@ public:
 private:
 	int mPosX, mPosY, mVelX, mVelY;
 };
+
+//Our bitmap font
+class LBitmapFont
+{
+public:
+	//The default constructor
+	LBitmapFont();
+
+	//Generates the font
+	bool buildFont(std::string path);
+
+	//Deallocates font
+	void free();
+
+	//Shows the text
+	void renderText(int x, int y, std::string text);
+
+private:
+	//The font texture
+	LTexture mFontTexture;
+
+	//The individual characters in the surface
+	SDL_Rect mChars[256];
+
+	//Spacing Variables
+	int mNewLine, mSpace;
+
+	//Surface pixels
+	SDL_Surface* mSurfacePixels;
+};
 //Methods
 bool init();
 bool loadMedia();
@@ -46,10 +87,14 @@ LTexture gDotTex, gBckgTex, gFloorTex;
 const int WALKING_ANIMATION_FRAMES = 3;
 SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
 LTexture gSpriteSheetTexture;
+LBitmapFont gBitmapFont;
+int time = 0;
+char time_msg[20] = "Time: ";
 
 LTexture::LTexture() {
 	//Constructor
 	mTex = NULL;
+	mSurfacePixels = NULL;
 	m_w = 0;
 	m_h = 0;
 }
@@ -58,7 +103,13 @@ LTexture::~LTexture() {
 	free();
 }
 
-bool LTexture::loadFromFile(std::string path) {
+LBitmapFont::LBitmapFont(){
+	//Initialize variables(constructor)
+	mNewLine = 0;
+	mSpace = 0;
+}
+
+/*bool LTexture::loadFromFile(std::string path) {
 	free();
 	SDL_Texture* newTex = NULL;
 	//Load img at given path
@@ -80,6 +131,93 @@ bool LTexture::loadFromFile(std::string path) {
 	}
 	mTex = newTex;
 	return mTex != NULL;
+}*/
+
+bool LTexture::loadFromFile(std::string path)
+{
+	//Load pixels
+	if (!loadPixelsFromFile(path))
+	{
+		printf("Failed to load pixels for %s!\n", path.c_str());
+	}
+	else
+	{
+		//Load texture from pixels
+		if (!loadFromPixels())
+		{
+			printf("Failed to texture from pixels from %s!\n", path.c_str());
+		}
+	}
+
+	//Return success
+	return mTex != NULL;
+}
+
+bool LTexture::loadPixelsFromFile(std::string path)
+{
+	//Free preexisting assets
+	free();
+
+	//Load image at specified path
+	SDL_Surface* loadedSurface = IMG_Load(path.c_str());
+	if (loadedSurface == NULL)
+	{
+		printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+	}
+	else
+	{
+		//Convert surface to display format
+		mSurfacePixels = SDL_ConvertSurfaceFormat(loadedSurface, SDL_GetWindowPixelFormat(gWin), 0);
+		if (mSurfacePixels == NULL)
+		{
+			printf("Unable to convert loaded surface to display format! SDL Error: %s\n", SDL_GetError());
+		}
+		else
+		{
+			//Get image dimensions
+			m_w = mSurfacePixels->w;
+			m_h = mSurfacePixels->h;
+		}
+
+		//Get rid of old loaded surface
+		SDL_FreeSurface(loadedSurface);
+	}
+
+	return mSurfacePixels != NULL;
+}
+
+bool LTexture::loadFromPixels()
+{
+	//Only load if pixels exist
+	if (mSurfacePixels == NULL)
+	{
+		printf("No pixels loaded!");
+	}
+	else
+	{
+		//Color key image
+		SDL_SetColorKey(mSurfacePixels, SDL_TRUE, SDL_MapRGB(mSurfacePixels->format, 0, 0xFF, 0xFF));
+
+		//Create texture from surface pixels
+		mTex = SDL_CreateTextureFromSurface(gRenderer, mSurfacePixels);
+		if (mTex == NULL)
+		{
+			printf("Unable to create texture from loaded pixels! SDL Error: %s\n", SDL_GetError());
+		}
+		else
+		{
+			//Get image dimensions
+			m_w = mSurfacePixels->w;
+			m_h = mSurfacePixels->h;
+		}
+
+		//Get rid of old loaded surface
+		SDL_FreeSurface(mSurfacePixels);
+		mSurfacePixels = NULL;
+	}
+
+	//Return success
+	return mTex != NULL;
 }
 
 void LTexture::free() {
@@ -89,6 +227,10 @@ void LTexture::free() {
 		mTex = NULL;
 		m_w = 0;
 		m_h = 0;
+	}
+	if (mSurfacePixels != NULL) {
+		mSurfacePixels = NULL;
+		SDL_FreeSurface(mSurfacePixels);
 	}
 }
 
@@ -121,6 +263,39 @@ int LTexture::getWidth() {
 
 int LTexture::getHeight() {
 	return m_h;
+}
+
+Uint32* LTexture::getPixels32()
+{
+	Uint32* pixels = NULL;
+
+	if (mSurfacePixels != NULL)
+	{
+		pixels = static_cast<Uint32*>(mSurfacePixels->pixels);
+	}
+
+	return pixels;
+}
+
+Uint32 LTexture::getPixel32(Uint32 x, Uint32 y)
+{
+	//Convert the pixels to 32 bit
+	Uint32* pixels = static_cast<Uint32*>(mSurfacePixels->pixels);
+
+	//Get the pixel requested
+	return pixels[(y * getPitch32()) + x];
+}
+
+Uint32 LTexture::getPitch32()
+{
+	Uint32 pitch = 0;
+
+	if (mSurfacePixels != NULL)
+	{
+		pitch = mSurfacePixels->pitch / 4;
+	}
+
+	return pitch;
 }
 
 Dot::Dot() {
@@ -165,6 +340,225 @@ void Dot::move() {
 void Dot::render(SDL_Rect* clip) {
 	//gDotTex.render(mPosX, mPosY);
 	gSpriteSheetTexture.render(mPosX, mPosY,clip);
+}
+
+bool LBitmapFont::buildFont(std::string path)
+{
+	//Get rid of preexisting texture
+	free();
+
+	//Load bitmap image
+	bool success = true;
+	if (!mFontTexture.loadPixelsFromFile(path))
+	{
+		printf("Unable to load bitmap font surface!\n");
+		success = false;
+	}
+	else
+	{
+		//Get the background color
+		Uint32 bgColor = mFontTexture.getPixel32(0, 0);
+
+		//Set the cell dimensions
+		int cellW = mFontTexture.getWidth() / 16;
+		int cellH = mFontTexture.getHeight() / 16;
+
+		//New line variables
+		int top = cellH;
+		int baseA = cellH;
+
+		//The current character we're setting
+		int currentChar = 0;
+
+		//Go through the cell rows
+		for (int rows = 0; rows < 16; ++rows)
+		{
+			//Go through the cell columns
+			for (int cols = 0; cols < 16; ++cols)
+			{
+				//Set the character offset
+				mChars[currentChar].x = cellW * cols;
+				mChars[currentChar].y = cellH * rows;
+
+				//Set the dimensions of the character
+				mChars[currentChar].w = cellW;
+				mChars[currentChar].h = cellH;
+
+				//Find Left Side
+				//Go through pixel columns
+				for (int pCol = 0; pCol < cellW; ++pCol)
+				{
+					//Go through pixel rows
+					for (int pRow = 0; pRow < cellH; ++pRow)
+					{
+						//Get the pixel offsets
+						int pX = (cellW * cols) + pCol;
+						int pY = (cellH * rows) + pRow;
+
+						//If a non colorkey pixel is found
+						if (mFontTexture.getPixel32(pX, pY) != bgColor)
+						{
+							//Set the x offset
+							mChars[currentChar].x = pX;
+
+							//Break the loops
+							pCol = cellW;
+							pRow = cellH;
+						}
+					}
+				}
+
+				//Find Right Side
+				//Go through pixel columns
+				for (int pColW = cellW - 1; pColW >= 0; --pColW)
+				{
+					//Go through pixel rows
+					for (int pRowW = 0; pRowW < cellH; ++pRowW)
+					{
+						//Get the pixel offsets
+						int pX = (cellW * cols) + pColW;
+						int pY = (cellH * rows) + pRowW;
+
+						//If a non colorkey pixel is found
+						if (mFontTexture.getPixel32(pX, pY) != bgColor)
+						{
+							//Set the width
+							mChars[currentChar].w = (pX - mChars[currentChar].x) + 1;
+
+							//Break the loops
+							pColW = -1;
+							pRowW = cellH;
+						}
+					}
+				}
+
+				//Find Top
+				//Go through pixel rows
+				for (int pRow = 0; pRow < cellH; ++pRow)
+				{
+					//Go through pixel columns
+					for (int pCol = 0; pCol < cellW; ++pCol)
+					{
+						//Get the pixel offsets
+						int pX = (cellW * cols) + pCol;
+						int pY = (cellH * rows) + pRow;
+
+						//If a non colorkey pixel is found
+						if (mFontTexture.getPixel32(pX, pY) != bgColor)
+						{
+							//If new top is found
+							if (pRow < top)
+							{
+								top = pRow;
+							}
+
+							//Break the loops
+							pCol = cellW;
+							pRow = cellH;
+						}
+					}
+				}
+
+				//Find Bottom of A
+				if (currentChar == 'A')
+				{
+					//Go through pixel rows
+					for (int pRow = cellH - 1; pRow >= 0; --pRow)
+					{
+						//Go through pixel columns
+						for (int pCol = 0; pCol < cellW; ++pCol)
+						{
+							//Get the pixel offsets
+							int pX = (cellW * cols) + pCol;
+							int pY = (cellH * rows) + pRow;
+
+							//If a non colorkey pixel is found
+							if (mFontTexture.getPixel32(pX, pY) != bgColor)
+							{
+								//Bottom of a is found
+								baseA = pRow;
+
+								//Break the loops
+								pCol = cellW;
+								pRow = -1;
+							}
+						}
+					}
+				}
+
+				//Go to the next character
+				++currentChar;
+			}
+		}
+
+		//Calculate space
+		mSpace = cellW / 2;
+
+		//Calculate new line
+		mNewLine = baseA - top;
+
+		//Lop off excess top pixels
+		for (int i = 0; i < 256; ++i)
+		{
+			mChars[i].y += top;
+			mChars[i].h -= top;
+		}
+
+		//Create final texture
+		if (!mFontTexture.loadFromPixels())
+		{
+			printf("Unable to create font texture!\n");
+			success = false;
+		}
+	}
+
+	return success;
+}
+
+void LBitmapFont::free()
+{
+	mFontTexture.free();
+}
+
+void LBitmapFont::renderText(int x, int y, std::string text)
+{
+	//If the font has been built
+	if (mFontTexture.getWidth() > 0)
+	{
+		//Temp offsets
+		int curX = x, curY = y;
+
+		//Go through the text
+		for (int i = 0; i < text.length(); ++i)
+		{
+			//If the current character is a space
+			if (text[i] == ' ')
+			{
+				//Move over
+				curX += mSpace;
+			}
+			//If the current character is a newline
+			else if (text[i] == '\n')
+			{
+				//Move down
+				curY += mNewLine;
+
+				//Move back
+				curX = x;
+			}
+			else
+			{
+				//Get the ASCII value of the character
+				int ascii = (unsigned char)text[i];
+
+				//Show the character
+				mFontTexture.render(curX, curY, &mChars[ascii]);
+
+				//Move over the width of the character with one pixel of padding
+				curX += mChars[ascii].w + 1;
+			}
+		}
+	}
 }
 
 bool init() {
@@ -221,6 +615,12 @@ bool loadMedia() {
 		printf("Failed to load floor texture..\n");
 		success = false;
 	}
+	//Load font texture
+	if (!gBitmapFont.buildFont("C:/Users/ricar/Downloads/41_bitmap_fonts/lazyfont.png"))
+	{
+		printf("Failed to load bitmap font!\n");
+		success = false;
+	}
 
 	//Load sprite sheet texture
 	if (!gSpriteSheetTexture.loadFromFile("C:/Users/ricar/Pictures/birdanimation.png"))
@@ -253,10 +653,11 @@ bool loadMedia() {
 void close() {
 	//Free loaded images
 	gSpriteSheetTexture.free();
-	//Free textures
+	//Free textures and fonts
 	gDotTex.free();
 	gBckgTex.free();
 	gFloorTex.free();
+	gBitmapFont.free();
 	//Destroy SDL components
 	SDL_DestroyRenderer(gRenderer);
 	SDL_DestroyWindow(gWin);
@@ -306,11 +707,15 @@ int main(int argc, char* args[]) {
 				SDL_Rect* currentClip = &gSpriteClips[frame / 3];
 				dot.render(currentClip);
 				//gSpriteSheetTexture.render((SCREEN_W - currentClip->w) / 2, (SCREEN_H - currentClip->h) / 2, currentClip);
+				//Render text
+				int amount = SDL_GetTicks() / 1000;
+				sprintf_s(time_msg, "Time: %d", amount);
+				gBitmapFont.renderText(SCREEN_W - 90, 0, time_msg);
 				//Update screen
 				SDL_RenderPresent(gRenderer);
 				//Go to next frame
 				++frame;
-
+				printf("%d\n", SDL_GetTicks()/1000);
 				//Cycle animation
 				if (frame / 3 >= WALKING_ANIMATION_FRAMES)
 				{

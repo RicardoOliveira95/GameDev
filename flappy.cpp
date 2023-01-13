@@ -82,14 +82,14 @@ void close();
 //Vars
 SDL_Window* gWin = NULL;
 SDL_Renderer* gRenderer = NULL;
-LTexture gDotTex, gBckgTex, gFloorTex;
+LTexture gDotTex, gBckgTex, gFloorTex, gPipeNTex,gPipeSTex;
 //Walking animation
 const int WALKING_ANIMATION_FRAMES = 3;
 SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
 LTexture gSpriteSheetTexture;
 LBitmapFont gBitmapFont;
 int time = 0;
-char time_msg[20] = "Time: ";
+char time_msg[20];
 
 LTexture::LTexture() {
 	//Constructor
@@ -615,6 +615,14 @@ bool loadMedia() {
 		printf("Failed to load floor texture..\n");
 		success = false;
 	}
+	if (!gPipeNTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/toptube.png")) {
+		printf("Failed to load pipe North texture..\n");
+		success = false;
+	}
+	if (!gPipeSTex.loadFromFile("C:/Users/ricar/libgdx-projs/FlappyB/desktop/build/resources/main/bottomtube.png")) {
+		printf("Failed to load pipe South texture..\n");
+		success = false;
+	}
 	//Load font texture
 	if (!gBitmapFont.buildFont("C:/Users/ricar/Downloads/41_bitmap_fonts/lazyfont.png"))
 	{
@@ -657,6 +665,8 @@ void close() {
 	gDotTex.free();
 	gBckgTex.free();
 	gFloorTex.free();
+	gPipeNTex.free();
+	gPipeSTex.free();
 	gBitmapFont.free();
 	//Destroy SDL components
 	SDL_DestroyRenderer(gRenderer);
@@ -703,6 +713,10 @@ int main(int argc, char* args[]) {
 				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth(), 0);
 				gFloorTex.render(scrollingOffSet, 400);
 				gFloorTex.render(scrollingOffSet + gFloorTex.getWidth(), 400);
+				gPipeSTex.render(scrollingOffSet, 300);
+				gPipeSTex.render(scrollingOffSet +gFloorTex.getWidth(), 300);
+				gPipeNTex.render(scrollingOffSet+SCREEN_W/2, 0);
+				gPipeNTex.render(scrollingOffSet + gFloorTex.getWidth()+SCREEN_W/2, 0);
 				//Render current frame
 				SDL_Rect* currentClip = &gSpriteClips[frame / 3];
 				dot.render(currentClip);

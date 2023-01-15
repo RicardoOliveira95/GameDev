@@ -769,8 +769,7 @@ int main(int argc, char* args[]) {
 				int amount = SDL_GetTicks() / 1000;
 				sprintf_s(time_msg, "Time: %d", amount);
 				gBitmapFont.renderText(SCREEN_W - 90, 0, time_msg);
-				//Update screen
-				SDL_RenderPresent(gRenderer);
+				
 				if (!is_game_over) {
 					//Go to next frame
 					++frame;
@@ -785,6 +784,11 @@ int main(int argc, char* args[]) {
 					if (frame / 3 >= WALKING_ANIMATION_FRAMES)
 						frame = 0;
 				}
+				else
+					gBitmapFont.renderText(SCREEN_W / 2, SCREEN_H / 2, "GAME OVER!");
+				
+				//Update screen
+				SDL_RenderPresent(gRenderer);
 			}
 		}
 	}//Free res and close SDL

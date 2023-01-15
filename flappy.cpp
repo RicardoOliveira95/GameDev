@@ -40,10 +40,11 @@ public:
 	static const int DOT_W = 15, DOT_H = 15, DOT_VEL = 4;
 	Dot();
 	void handleEvent(SDL_Event& evt);
-	void move();
+	void move(SDL_Rect walls[]);
 	void render(SDL_Rect* clip=NULL);
 private:
 	int mPosX, mPosY, mVelX, mVelY;
+	SDL_Rect mCollider;
 };
 
 //Our bitmap font
@@ -90,6 +91,9 @@ LTexture gSpriteSheetTexture;
 LBitmapFont gBitmapFont;
 int time = 0;
 char time_msg[20];
+//Box collision detector
+bool checkCollision(SDL_Rect pl,SDL_Rect walls[]);
+bool is_game_over = false;
 
 LTexture::LTexture() {
 	//Constructor
@@ -108,30 +112,6 @@ LBitmapFont::LBitmapFont(){
 	mNewLine = 0;
 	mSpace = 0;
 }
-
-/*bool LTexture::loadFromFile(std::string path) {
-	free();
-	SDL_Texture* newTex = NULL;
-	//Load img at given path
-	SDL_Surface* loadedSurf = IMG_Load(path.c_str());
-	if (loadedSurf == NULL)
-		printf("Unable to load image at %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
-	else {
-		//Color key img
-		SDL_SetColorKey(loadedSurf, SDL_TRUE, SDL_MapRGB(loadedSurf->format, 0, 0xFF, 0xFF));
-		//Create tex from surface pixels
-		newTex = SDL_CreateTextureFromSurface(gRenderer, loadedSurf);
-		if (newTex == NULL)
-			printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
-		else {
-			m_w = loadedSurf->w;
-			m_h = loadedSurf->h;
-		}
-		SDL_FreeSurface(loadedSurf);
-	}
-	mTex = newTex;
-	return mTex != NULL;
-}*/
 
 bool LTexture::loadFromFile(std::string path)
 {
@@ -302,6 +282,9 @@ Dot::Dot() {
 	//Init vars
 	mPosX = 0; mPosY = 0;
 	mVelX = 0; mVelY = 0;
+	//Set collision box dimension
+	mCollider.w = DOT_W;
+	mCollider.h = DOT_H;
 }
 
 void Dot::handleEvent(SDL_Event& evt) {
@@ -323,11 +306,15 @@ void Dot::handleEvent(SDL_Event& evt) {
 		}
 }
 
-void Dot::move() {
+void Dot::move(SDL_Rect walls[]) {
 	//Update dot pos
 	mPosX += mVelX;
 	mPosY += mVelY;
+	mCollider.x=mPosX;
+	mCollider.y=mPosY;
 	
+	if (checkCollision(mCollider,walls))
+		is_game_over=true;
 	//Offbounds
 	if ((mPosX < 0) || (mPosX + DOT_W > SCREEN_W))
 		mPosX -= mVelX;
@@ -561,6 +548,42 @@ void LBitmapFont::renderText(int x, int y, std::string text)
 	}
 }
 
+bool checkCollision(SDL_Rect pl,SDL_Rect obs[])
+{
+	//The sides of the rectangles
+	int leftA, leftB;
+	int rightA, rightB;
+	int topA, topB;
+	int bottomA, bottomB;
+
+	//Calculate the sides of rect A
+	leftA = pl.x;
+	rightA = pl.x + pl.w;
+	topA = pl.y;
+	bottomA = pl.y + pl.h;
+
+	for (int i = 0; i < 4; ++i) {
+		//Calculate the sides of rect B
+		leftB = obs[i].x;
+		rightB = obs[i].x + obs[i].w;
+		topB = obs[i].y;
+		bottomB = obs[i].y + obs[i].h;
+		printf("Pipe %d: %d\n", i, obs[i].x);
+
+		//If any of the sides from A are outside of B
+		if (bottomA <= topB || topA >= bottomB || rightA <= leftB || leftA >= rightB)
+		{
+			//printf("PASS!");
+			if(i==3)
+				return false;
+		}
+		else
+			return true;
+	}
+	//If none of the sides from A are outside B
+	return true;
+}
+
 bool init() {
 	//Init flag
 	bool success = true;
@@ -699,12 +722,6 @@ int main(int argc, char* args[]) {
 						quit = true;
 					dot.handleEvent(evt);
 				}
-				//Update dot pos
-				dot.move();
-				//Scroll bckg
-				--scrollingOffSet;
-				if (scrollingOffSet < -gBckgTex.getWidth())
-					scrollingOffSet = 0;
 				//Clear
 				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
 				SDL_RenderClear(gRenderer);
@@ -717,6 +734,33 @@ int main(int argc, char* args[]) {
 				gPipeSTex.render(scrollingOffSet +gFloorTex.getWidth(), 300);
 				gPipeNTex.render(scrollingOffSet+SCREEN_W/2, 0);
 				gPipeNTex.render(scrollingOffSet + gFloorTex.getWidth()+SCREEN_W/2, 0);
+				//Set the pipes
+				SDL_Rect pipe1;
+				pipe1.x = scrollingOffSet;
+				pipe1.y = 300;
+				pipe1.w = gPipeSTex.getWidth();
+				pipe1.h = gPipeSTex.getHeight();
+				SDL_Rect pipe2;
+				pipe2.x = scrollingOffSet + gFloorTex.getWidth();
+				pipe2.y = 300;
+				pipe2.w = gPipeSTex.getWidth();
+				pipe2.h = gPipeSTex.getHeight();
+				//Set the pipes
+				SDL_Rect pipe3;
+				pipe3.x = scrollingOffSet + SCREEN_W / 2;
+				pipe3.y = 0;
+				pipe3.w = gPipeNTex.getWidth();
+				pipe3.h = gPipeNTex.getHeight();
+				SDL_Rect pipe4;
+				pipe4.x = scrollingOffSet + gFloorTex.getWidth() + SCREEN_W / 2;
+				pipe4.y = 0;
+				pipe4.w = gPipeNTex.getWidth();
+				pipe4.h = gPipeNTex.getHeight();
+				SDL_Rect pipes[4];
+				pipes[0] = pipe1;
+				pipes[1] = pipe2;
+				pipes[2] = pipe3;
+				pipes[3] = pipe4;
 				//Render current frame
 				SDL_Rect* currentClip = &gSpriteClips[frame / 3];
 				dot.render(currentClip);
@@ -727,13 +771,19 @@ int main(int argc, char* args[]) {
 				gBitmapFont.renderText(SCREEN_W - 90, 0, time_msg);
 				//Update screen
 				SDL_RenderPresent(gRenderer);
-				//Go to next frame
-				++frame;
-				printf("%d\n", SDL_GetTicks()/1000);
-				//Cycle animation
-				if (frame / 3 >= WALKING_ANIMATION_FRAMES)
-				{
-					frame = 0;
+				if (!is_game_over) {
+					//Go to next frame
+					++frame;
+					//Update dot pos
+					dot.move(pipes);
+					//Scroll bckg
+					--scrollingOffSet;
+					if (scrollingOffSet < -gBckgTex.getWidth())
+						scrollingOffSet = 0;
+
+					//Cycle animation
+					if (frame / 3 >= WALKING_ANIMATION_FRAMES)
+						frame = 0;
 				}
 			}
 		}

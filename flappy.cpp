@@ -89,8 +89,9 @@ const int WALKING_ANIMATION_FRAMES = 3;
 SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
 LTexture gSpriteSheetTexture;
 LBitmapFont gBitmapFont;
-int time = 0;
+int amount = 0;
 char time_msg[20];
+char gameover_msg[20];
 //Box collision detector
 bool checkCollision(SDL_Rect pl,SDL_Rect walls[]);
 bool is_game_over = false;
@@ -713,6 +714,7 @@ int main(int argc, char* args[]) {
 			SDL_Event evt;
 			Dot dot;
 			int scrollingOffSet = 0;
+			int rand_offset = 0;
 			int frame = 0;
 
 			while (!quit) {
@@ -727,13 +729,13 @@ int main(int argc, char* args[]) {
 				SDL_RenderClear(gRenderer);
 				//Render dot and background
 				gBckgTex.render(scrollingOffSet, 0);
-				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth(), 0);
+				gBckgTex.render(scrollingOffSet + gBckgTex.getWidth()-rand_offset, 0);
 				gFloorTex.render(scrollingOffSet, 400);
-				gFloorTex.render(scrollingOffSet + gFloorTex.getWidth(), 400);
+				gFloorTex.render(scrollingOffSet + gFloorTex.getWidth()-rand_offset, 400);
 				gPipeSTex.render(scrollingOffSet, 300);
-				gPipeSTex.render(scrollingOffSet +gFloorTex.getWidth(), 300);
+				gPipeSTex.render(scrollingOffSet +gFloorTex.getWidth()-rand_offset, 300);
 				gPipeNTex.render(scrollingOffSet+SCREEN_W/2, 0);
-				gPipeNTex.render(scrollingOffSet + gFloorTex.getWidth()+SCREEN_W/2, 0);
+				gPipeNTex.render(scrollingOffSet + gFloorTex.getWidth()+SCREEN_W/2-rand_offset, 0);
 				//Set the pipes
 				SDL_Rect pipe1;
 				pipe1.x = scrollingOffSet;
@@ -766,27 +768,32 @@ int main(int argc, char* args[]) {
 				dot.render(currentClip);
 				//gSpriteSheetTexture.render((SCREEN_W - currentClip->w) / 2, (SCREEN_H - currentClip->h) / 2, currentClip);
 				//Render text
-				int amount = SDL_GetTicks() / 1000;
+				
 				sprintf_s(time_msg, "Time: %d", amount);
 				gBitmapFont.renderText(SCREEN_W - 90, 0, time_msg);
 				
 				if (!is_game_over) {
+					amount = SDL_GetTicks() / 1000;
 					//Go to next frame
 					++frame;
 					//Update dot pos
 					dot.move(pipes);
 					//Scroll bckg
 					--scrollingOffSet;
-					if (scrollingOffSet < -gBckgTex.getWidth())
+					if (scrollingOffSet < -gBckgTex.getWidth()) {
 						scrollingOffSet = 0;
+						rand_offset = rand() % 50;
+					}
 
 					//Cycle animation
 					if (frame / 3 >= WALKING_ANIMATION_FRAMES)
 						frame = 0;
 				}
-				else
-					gBitmapFont.renderText(SCREEN_W / 2, SCREEN_H / 2, "GAME OVER!");
-				
+				else {
+					sprintf_s(gameover_msg, "GAME OVER! \n %d", amount);
+					gBitmapFont.renderText(SCREEN_W / 2, SCREEN_H / 2, gameover_msg);
+				}
+
 				//Update screen
 				SDL_RenderPresent(gRenderer);
 			}
